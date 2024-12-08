@@ -3,6 +3,7 @@ import { App } from "octokit"
 import { createNodeMiddleware } from "@octokit/webhooks"
 import fs from "fs"
 import http from "http"
+import { client } from "./twilio.js"
 
 dotenv.config()
 
@@ -23,6 +24,14 @@ const app = new App({
 async function handlePush({ octokit, payload }) {
     console.log(`Push event`)
     console.log(payload.sender)
+
+    const message = await client.messages.create({
+        body: "You made a push request. Good job!",
+        from: "+18557841776",
+        to: "+18777804236",
+    })
+
+    console.log(message.body)
 }
 
 app.webhooks.on("push", handlePush)
