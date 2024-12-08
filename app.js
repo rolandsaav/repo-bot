@@ -4,6 +4,7 @@ import { createNodeMiddleware } from "@octokit/webhooks"
 import fs from "fs"
 import http from "http"
 import { client } from "./twilio.js"
+import express from "express"
 
 dotenv.config()
 
@@ -21,6 +22,7 @@ const app = new App({
         secret: webhookSecret
     }
 })
+
 
 async function verifyNumber(phoneNumber) {
     const verification = await client.verify.v2.services(verificationSecret)
@@ -57,8 +59,13 @@ const host = "localhost"
 const path = "/api/webhook";
 const localWebhookUrl = `http://${host}:${port}${path}`
 
-const middleware = createNodeMiddleware(app.webhooks, { path });
+const middleware = createNodeMiddleware(app, { path });
 
-http.createServer(middleware).listen(port, () => {
-    console.log(`Server is listening for events at: ${localWebhookUrl}`);
+const expressApp = express()
+
+expressApp.use(middleware);
+
+expressApp.listen(port, () => {
+    console.log(`Server is listening on port: ${port}`)
 })
+
