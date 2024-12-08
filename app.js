@@ -1,6 +1,7 @@
 import dotenv from "dotenv"
 import { App } from "octokit"
 import { createNodeMiddleware } from "@octokit/webhooks"
+import { createNodeMiddleware as createOtherMiddleware } from "@octokit/app"
 import fs from "fs"
 import http from "http"
 import { client } from "./twilio.js"
@@ -33,7 +34,7 @@ async function verifyNumber(phoneNumber) {
 
 async function handlePush({ octokit, payload }) {
     console.log(`Push event`)
-    console.log(payload.sender)
+    console.log(payload.sender.login)
 
     const message = await client.messages.create({
         body: "You made a push request. Good job!",
@@ -59,11 +60,21 @@ const host = "localhost"
 const path = "/api/webhook";
 const localWebhookUrl = `http://${host}:${port}${path}`
 
-const middleware = createNodeMiddleware(app.webhooks, { path });
+const webhookMiddleware = createNodeMiddleware(app.webhooks, { path });
 
 const expressApp = express()
 
-expressApp.use(middleware);
+expressApp.use(webhookMiddleware);
+
+expressApp.use(express.json())
+
+expressApp.post("/verifyNumber", (req, res) => {
+    const phoneNumber = req.body.phone
+
+    console.log(phoneNumber)
+
+    res.send(`Verify Number: ${phoneNumber}`)
+})
 
 expressApp.listen(port, () => {
     console.log(`Server is listening on port: ${port}`)
