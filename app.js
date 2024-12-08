@@ -10,6 +10,7 @@ dotenv.config()
 const appId = process.env.APP_ID;
 const webhookSecret = process.env.WEBHOOK_SECRET;
 const privateKeyPath = process.env.PRIVATE_KEY_PATH;
+const verificationSecret = process.env.TWILIO_VERIFY_SID;
 
 const privateKey = fs.readFileSync(privateKeyPath, "utf8")
 
@@ -20,6 +21,13 @@ const app = new App({
         secret: webhookSecret
     }
 })
+
+async function verifyNumber(phoneNumber) {
+    const verification = await client.verify.v2.services(verificationSecret)
+        .verifications
+        .create({ to: phoneNumber, channel: "sms" })
+    console.log(verification.sid)
+}
 
 async function handlePush({ octokit, payload }) {
     console.log(`Push event`)
