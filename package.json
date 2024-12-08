@@ -12,7 +12,8 @@
     "description": "",
     "dependencies": {
         "dotenv": "^16.4.7",
-        "octokit": "^4.0.2"
+        "octokit": "^4.0.2",
+        "twilio": "^5.3.7"
     },
     "devDependencies": {
         "smee-client": "^2.0.4"
