@@ -36,7 +36,7 @@ async function verifyNumber(phoneNumber) {
 }
 
 async function handlePush({ octokit, payload }) {
-    console.log(`Push event`)
+    console.log("Push event")
     console.log(payload.sender.login)
 
     const message = await client.messages.create({
