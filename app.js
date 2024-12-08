@@ -59,7 +59,7 @@ const host = "localhost"
 const path = "/api/webhook";
 const localWebhookUrl = `http://${host}:${port}${path}`
 
-const middleware = createNodeMiddleware(app, { path });
+const middleware = createNodeMiddleware(app.webhooks, { path });
 
 const expressApp = express()
 
