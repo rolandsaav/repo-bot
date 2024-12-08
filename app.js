@@ -27,14 +27,6 @@ const app = new App({
 })
 
 
-async function verifyNumber(phoneNumber) {
-    const verification = await client.verify.v2.services(verificationSecret)
-        .verifications
-        .create({ to: phoneNumber, channel: "sms" })
-    console.log(verification.sid)
-    return verification
-}
-
 async function handlePush({ octokit, payload }) {
     console.log("Push event")
     console.log(payload.sender.login)
