@@ -5,6 +5,7 @@ import { createNodeMiddleware as createOtherMiddleware } from "@octokit/app"
 import fs from "fs"
 import { client } from "./twilio.js"
 import express from "express"
+import axios from "axios"
 
 dotenv.config()
 
@@ -97,12 +98,33 @@ expressApp.post("/checkcode", async (req, res) => {
     }
 })
 
+async function exchangeCode(code) {
+    const params = {
+        "client_id": clientId,
+        "client_secret": clientSecret,
+        "code": code
+    };
+
+    const response = await axios.post("https://github.com/login/oauth/access_token",
+        new URLSearchParams(params),
+        {
+            headers: { 'Accept': 'application/json' }
+        })
+
+    return response.data
+}
+
 expressApp.get("/", (req, res) => {
     res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
 })
 
-expressApp.get("/github/callback", (req, res) => {
+expressApp.get("/github/callback", async (req, res) => {
     const code = req.query.code
+
+    const response = await exchangeCode(code);
+
+    console.log(response.error)
+    console.log(response)
 
     res.send(`Successfully authorized! Got code ${code}`)
 })
