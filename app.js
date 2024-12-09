@@ -1,67 +1,33 @@
-import dotenv from "dotenv"
-import { App } from "octokit"
-import { createNodeMiddleware } from "@octokit/webhooks"
-import { createNodeMiddleware as createOtherMiddleware } from "@octokit/app"
-import fs from "fs"
+import { webhookMiddleware } from "./octokit.js"
 import { client } from "./twilio.js"
 import express from "express"
 import axios from "axios"
+import session from "express-session"
+import dotenv from "dotenv"
 
 dotenv.config()
 
-const appId = process.env.APP_ID;
-const webhookSecret = process.env.WEBHOOK_SECRET;
-const privateKeyPath = process.env.PRIVATE_KEY_PATH;
 const verificationSecret = process.env.TWILIO_VERIFY_SID;
 const clientSecret = process.env.CLIENT_SECRET
 const clientId = process.env.CLIENT_ID
-
-const privateKey = fs.readFileSync(privateKeyPath, "utf8")
-
-const app = new App({
-    appId: appId,
-    privateKey: privateKey,
-    webhooks: {
-        secret: webhookSecret
-    }
-})
-
-
-async function handlePush({ octokit, payload }) {
-    console.log("Push event")
-    console.log(payload.sender.login)
-
-    const message = await client.messages.create({
-        body: "You made a push request. Good job!",
-        from: "+18557841776",
-        to: "+18777804236",
-    })
-
-    console.log(message.body)
-}
-
-app.webhooks.on("push", handlePush)
-
-app.webhooks.onError((error) => {
-    if (error.name === "AggregateError") {
-        console.error(`Error processing request: ${error.event}`);
-    } else {
-        console.error(error);
-    }
-});
-
-const port = 3000;
-const path = "/api/webhook";
-
-const webhookMiddleware = createNodeMiddleware(app.webhooks, { path });
+const port = 3000
 
 const expressApp = express()
 
 expressApp.use(webhookMiddleware);
 
 expressApp.use(express.json())
+expressApp.use(session({
+    secret: "Roland",
+    resave: false,
+    saveUninitialized: false,
+    cookie: { httpOnly: true, maxAge: 1000 * 60 }
+}))
 
 expressApp.post("/verifyNumber", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json("Unauthorized")
+    }
     const phoneNumber = req.body.phone
     console.log(phoneNumber)
     const verification = await client.verify.v2.services(verificationSecret)
@@ -74,6 +40,9 @@ expressApp.post("/verifyNumber", async (req, res) => {
 })
 
 expressApp.post("/checkcode", async (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).send("Unauthorized");
+    }
     const phoneNumber = req.body.phone
     const code = req.body.code
 
@@ -106,19 +75,40 @@ async function exchangeCode(code) {
     return response.data
 }
 
-expressApp.get("/", (req, res) => {
+expressApp.get("/", (_, res) => {
     res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
 })
 
 expressApp.get("/github/callback", async (req, res) => {
     const code = req.query.code
 
-    const response = await exchangeCode(code);
+    const tokenInfo = await exchangeCode(code);
 
-    console.log(response.error)
-    console.log(response)
+    const accessToken = tokenInfo.access_token;
+
+    const userResponse = await axios.get("https://api.github.com/user", {
+        headers: {
+            "Accept": 'application/json',
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${accessToken}`
+        }
+    })
+
+    const userData = userResponse.data
+
+    console.log(userData.login)
+    console.log(tokenInfo)
+
+    req.session.user = accessToken
 
     res.send(`Successfully authorized! Got code ${code}`)
+})
+
+expressApp.get("/auth/status", (req, res) => {
+    if (!req.session.user) {
+        return res.status(401).json("Unauthorized")
+    }
+    return res.status(200).send(`Authorized: ${req.session.user}`)
 })
 
 expressApp.listen(port, () => {
