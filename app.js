@@ -1,4 +1,5 @@
 import { webhookMiddleware } from "./octokit.js"
+import { Octokit } from "octokit"
 import { client } from "./twilio.js"
 import express from "express"
 import axios from "axios"
@@ -12,19 +13,19 @@ const clientSecret = process.env.CLIENT_SECRET
 const clientId = process.env.CLIENT_ID
 const port = 3000
 
-const expressApp = express()
+const app = express()
 
-expressApp.use(webhookMiddleware);
+app.use(webhookMiddleware);
 
-expressApp.use(express.json())
-expressApp.use(session({
+app.use(express.json())
+app.use(session({
     secret: "Roland",
     resave: false,
     saveUninitialized: false,
     cookie: { httpOnly: true, maxAge: 1000 * 60 }
 }))
 
-expressApp.post("/verifyNumber", async (req, res) => {
+app.post("/verifyNumber", async (req, res) => {
     if (!req.session.user) {
         return res.status(401).json("Unauthorized")
     }
@@ -39,7 +40,7 @@ expressApp.post("/verifyNumber", async (req, res) => {
     res.send(`Verify Number: ${phoneNumber}`)
 })
 
-expressApp.post("/checkcode", async (req, res) => {
+app.post("/checkcode", async (req, res) => {
     if (!req.session.user) {
         return res.status(401).send("Unauthorized");
     }
@@ -75,16 +76,36 @@ async function exchangeCode(code) {
     return response.data
 }
 
-expressApp.get("/", (_, res) => {
-    res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
+app.get("/", async (req, res) => {
+    if (!req.session.user) {
+        return res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
+    }
+
+    const octokit = new Octokit({
+        auth: req.session.user
+    })
+
+    const response = await octokit.request('GET /user/repos', {
+        Headers: {
+            'X-GitHub-Api-Version': '2022-11-28'
+        }
+    })
+    const data = response.data
+    console.log(data.length)
+    for (let i = 0; i < data.length; i++) {
+        console.log(data[i].name)
+    }
+
+    res.send("Logged In")
 })
 
-expressApp.get("/github/callback", async (req, res) => {
+app.get("/github/callback", async (req, res) => {
     const code = req.query.code
 
     const tokenInfo = await exchangeCode(code);
 
     const accessToken = tokenInfo.access_token;
+
 
     const userResponse = await axios.get("https://api.github.com/user", {
         headers: {
@@ -104,14 +125,14 @@ expressApp.get("/github/callback", async (req, res) => {
     res.send(`Successfully authorized! Got code ${code}`)
 })
 
-expressApp.get("/auth/status", (req, res) => {
+app.get("/auth/status", (req, res) => {
     if (!req.session.user) {
         return res.status(401).json("Unauthorized")
     }
     return res.status(200).send(`Authorized: ${req.session.user}`)
 })
 
-expressApp.listen(port, () => {
+app.listen(port, () => {
     console.log(`Server is listening on port: ${port}`)
 })
 
