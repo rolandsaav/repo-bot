@@ -15,6 +15,8 @@ const port = 3000
 
 const app = express()
 
+app.set("view engine", "ejs");
+
 app.use(webhookMiddleware);
 
 app.use(express.json())
@@ -92,11 +94,13 @@ app.get("/", async (req, res) => {
     })
     const data = response.data
     console.log(data.length)
+    const repos = []
     for (let i = 0; i < data.length; i++) {
         console.log(data[i].name)
+        repos.push(data[i].name)
     }
 
-    res.send("Logged In")
+    res.render('index', { repos })
 })
 
 app.get("/github/callback", async (req, res) => {
