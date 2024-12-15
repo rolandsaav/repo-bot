@@ -15,7 +15,7 @@ dotenv.config()
 const verificationSecret = process.env.TWILIO_VERIFY_SID;
 const clientSecret = process.env.CLIENT_SECRET
 const clientId = process.env.CLIENT_ID
-const port = 3000
+const port = parseInt(process.env.PORT) || 3000;
 
 const app = express()
 
