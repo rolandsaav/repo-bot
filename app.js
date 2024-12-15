@@ -8,7 +8,6 @@ import { sessionsDb, usersDb } from "./firebase.js"
 import { v4 as uuidv4 } from "uuid"
 import { Timestamp } from "firebase-admin/firestore"
 import cookieParser from "cookie-parser"
-import { defaultEventBridgePolicies } from "twilio/lib/jwt/taskrouter/util.js"
 
 dotenv.config()
 
@@ -169,11 +168,29 @@ app.get("/github/callback", async (req, res) => {
 
     res.cookie("session", sessionId, { httpOnly: true })
     res.cookie("roland", "saavedra")
-    res.send(`Successfully authorized! Got code ${code}`)
+    return res.redirect("/")
 })
 
-app.get("/auth/status", sessionMiddleware, (req, res) => {
-    return res.status(200).send(`Authorized`)
+app.post("/sendupdates", async (req, res) => {
+    // Want to update users who have not pushed in the last hour
+    // Want to send updates to all users with verified numbers
+    const usersUpdateQueryResponse = await usersDb.where('lastPush', '<', Timestamp.fromMillis(Date.now() - 1000 * 60 * 60)).get()
+
+    const textPromises = []
+    usersUpdateQueryResponse.forEach(userDoc => {
+        const data = userDoc.data();
+        const message = client.messages.create({
+            body: "You haven't pushed any code recently! Get on it!",
+            from: "+18557841776",
+            to: "+18777804236",
+        })
+
+        textPromises.push(message)
+    })
+
+    await Promise.all(textPromises)
+
+    res.status(200).send(`Sent reminders to ${usersUpdateQueryResponse.size} users`)
 })
 
 app.post("/logout", sessionMiddleware, async (req, res) => {

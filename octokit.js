@@ -23,8 +23,6 @@ const app = new App({
 
 async function handlePush({ octokit, payload }) {
     console.log("Push event")
-    console.log(payload.sender)
-
     const ghId = payload.sender.id
     const ghUsername = payload.sender.login
 
