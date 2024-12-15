@@ -25,7 +25,7 @@ async function handlePush({ octokit, payload }) {
     console.log("Push event")
     console.log(payload.sender)
 
-    const ghId = payload.sender.ghId
+    const ghId = payload.sender.id
     const ghUsername = payload.sender.login
 
     const updateUserResponse = await usersDb.doc(ghId.toString()).update({ lastPush: Timestamp.now() })
