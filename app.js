@@ -174,6 +174,7 @@ app.get("/github/callback", async (req, res) => {
 app.post("/sendupdates", async (req, res) => {
     // Want to update users who have not pushed in the last hour
     // Want to send updates to all users with verified numbers
+    console.log("Send Updates begin")
     const usersUpdateQueryResponse = await usersDb.where('lastPush', '<', Timestamp.fromMillis(Date.now() - 1000 * 60 * 60)).get()
 
     const textPromises = []
