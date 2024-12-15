@@ -3,6 +3,8 @@ import { App } from "octokit"
 import fs from "fs"
 import { createNodeMiddleware } from "@octokit/webhooks"
 import { client } from "./twilio.js"
+import { usersDb } from "./firebase.js"
+import { Timestamp } from "firebase-admin/firestore"
 
 dotenv.config()
 const privateKeyPath = process.env.PRIVATE_KEY_PATH;
@@ -22,6 +24,12 @@ const app = new App({
 async function handlePush({ octokit, payload }) {
     console.log("Push event")
     console.log(payload.sender)
+
+    const ghId = payload.sender.ghId
+    const ghUsername = payload.sender.login
+
+    const updateUserResponse = await usersDb.doc(ghId.toString()).update({ lastPush: Timestamp.now() })
+    console.log(`Updated ${ghUsername}'s Info at ${updateUserResponse.writeTime.toDate().toString()}'`)
 
     const message = await client.messages.create({
         body: "You made a push request. Good job!",
