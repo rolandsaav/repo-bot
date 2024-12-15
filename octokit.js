@@ -21,7 +21,7 @@ const app = new App({
 
 async function handlePush({ octokit, payload }) {
     console.log("Push event")
-    console.log(payload.sender.login)
+    console.log(payload.sender)
 
     const message = await client.messages.create({
         body: "You made a push request. Good job!",
