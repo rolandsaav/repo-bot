@@ -3,8 +3,12 @@ import { Octokit } from "octokit"
 import { client } from "./twilio.js"
 import express from "express"
 import axios from "axios"
-import session from "express-session"
 import dotenv from "dotenv"
+import { sessionsDb, usersDb } from "./firebase.js"
+import { v4 as uuidv4 } from "uuid"
+import { Timestamp } from "firebase-admin/firestore"
+import cookieParser from "cookie-parser"
+import { defaultEventBridgePolicies } from "twilio/lib/jwt/taskrouter/util.js"
 
 dotenv.config()
 
@@ -20,17 +24,31 @@ app.set("view engine", "ejs");
 app.use(webhookMiddleware);
 
 app.use(express.json())
-app.use(session({
-    secret: "Roland",
-    resave: false,
-    saveUninitialized: false,
-    cookie: { httpOnly: true, maxAge: 1000 * 60 }
-}))
+app.use(cookieParser())
 
-app.post("/verifyNumber", async (req, res) => {
-    if (!req.session.user) {
-        return res.status(401).json("Unauthorized")
+const sessionMiddleware = async (req, res, next) => {
+    const sessionToken = req.cookies.session
+    if (!sessionToken) {
+        console.log("No session")
+        return res.redirect("/login")
     }
+    console.log(sessionToken)
+
+    const sessionDoc = await sessionsDb.doc(sessionToken).get();
+
+    if (!sessionDoc.exists) {
+        return res.send("Session doesn't exist")
+    }
+    console.log("Session exists")
+
+    const sessionData = sessionDoc.data()
+    const accessToken = sessionData.accessToken
+    console.log(accessToken)
+    req.accessToken = accessToken
+    next()
+}
+
+app.post("/verifyNumber", sessionMiddleware, async (req, res) => {
     const phoneNumber = req.body.phone
     console.log(phoneNumber)
     const verification = await client.verify.v2.services(verificationSecret)
@@ -42,10 +60,7 @@ app.post("/verifyNumber", async (req, res) => {
     res.send(`Verify Number: ${phoneNumber}`)
 })
 
-app.post("/checkcode", async (req, res) => {
-    if (!req.session.user) {
-        return res.status(401).send("Unauthorized");
-    }
+app.post("/checkcode", sessionMiddleware, async (req, res) => {
     const phoneNumber = req.body.phone
     const code = req.body.code
 
@@ -78,13 +93,13 @@ async function exchangeCode(code) {
     return response.data
 }
 
-app.get("/", async (req, res) => {
-    if (!req.session.user) {
-        return res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
-    }
+app.get("/login", (req, res) => {
+    return res.send(`<a href="https://www.github.com/login/oauth/authorize?client_id=${clientId}">Login with Github</a>`)
+})
 
+app.get("/", sessionMiddleware, async (req, res) => {
     const octokit = new Octokit({
-        auth: req.session.user
+        auth: req.accessToken
     })
 
     const response = await octokit.request('GET /user/repos', {
@@ -121,19 +136,55 @@ app.get("/github/callback", async (req, res) => {
 
     const userData = userResponse.data
 
-    console.log(userData.login)
-    console.log(tokenInfo)
+    const ghUsername = userData.login
+    const ghId = userData.id
 
-    req.session.user = accessToken
+    const sessionId = uuidv4()
+    const session = {
+        id: sessionId,
+        accessToken: accessToken,
+        created: Timestamp.now(),
+        expires: Timestamp.fromMillis(Date.now() + 1000 * 60 * 5)
+    }
 
+    const setSessionResponse = await sessionsDb.doc(sessionId).set(session)
+
+    if (setSessionResponse.writeTime) {
+        console.log("Wrote new session to database")
+    }
+
+    console.log(`User: ${ghUsername}, Token: ${accessToken}`)
+
+    console.log(userData)
+
+    const user = {
+        id: ghId,
+        username: ghUsername,
+        lastLogin: Timestamp.now()
+    }
+
+    const userRef = usersDb.doc(ghId.toString())
+
+    const setUserResponse = await userRef.set(user, { merge: true })
+
+    res.cookie("session", sessionId, { httpOnly: true })
+    res.cookie("roland", "saavedra")
     res.send(`Successfully authorized! Got code ${code}`)
 })
 
-app.get("/auth/status", (req, res) => {
-    if (!req.session.user) {
-        return res.status(401).json("Unauthorized")
-    }
-    return res.status(200).send(`Authorized: ${req.session.user}`)
+app.get("/auth/status", sessionMiddleware, (req, res) => {
+    return res.status(200).send(`Authorized`)
+})
+
+app.post("/logout", sessionMiddleware, async (req, res) => {
+    // invalidate current session in db
+    const sessionToken = req.cookies.session
+    const deleteSessionResult = await sessionsDb.doc(sessionToken).delete()
+    console.log(`Deleted session at ${deleteSessionResult.writeTime.toDate().toString()}`)
+
+    // clear session cookie
+    res.clearCookie("session")
+    res.status(200).send("You are logged out")
 })
 
 app.listen(port, () => {
