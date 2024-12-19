@@ -1,4 +1,0 @@
-!secret-key.pem
-!.env
-.git
-node_modules
