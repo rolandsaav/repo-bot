@@ -13,6 +13,8 @@ const appId = process.env.APP_ID;
 const privateKey = fs.readFileSync(privateKeyPath, "utf8")
 const path = "/api/webhook";
 
+const environment = process.env.NODE_ENV || "development"
+
 const app = new App({
     appId: appId,
     privateKey: privateKey,
