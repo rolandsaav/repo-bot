@@ -1,0 +1,33 @@
+{
+    "type": "module",
+    "name": "repo-bot",
+    "version": "1.0.0",
+    "main": "app.js",
+    "scripts": {
+        "server": "node app.js",
+        "start": "node app.js"
+    },
+    "engines": {
+        "node": "22.9.0"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "dependencies": {
+        "@google-cloud/functions-framework": "^3.4.3",
+        "axios": "^1.7.9",
+        "cookie-parser": "^1.4.7",
+        "dotenv": "^16.4.7",
+        "ejs": "^3.1.10",
+        "express": "^4.21.2",
+        "express-session": "^1.18.1",
+        "firebase-admin": "^13.0.1",
+        "octokit": "^4.0.2",
+        "twilio": "^5.3.7",
+        "uuid": "^11.0.3"
+    },
+    "devDependencies": {
+        "smee-client": "^2.0.4"
+    },
+    "description": ""
+}
