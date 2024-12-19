@@ -16,6 +16,15 @@ const clientSecret = process.env.CLIENT_SECRET
 const clientId = process.env.CLIENT_ID
 const port = parseInt(process.env.PORT) || 3000;
 
+const environmentType = process.env.NODE_ENV || "development"
+
+if (environmentType === "development") {
+    console.log("Running in development environment")
+}
+else {
+    console.log("Running in production environment")
+}
+
 const app = express()
 
 app.set("view engine", "ejs");
