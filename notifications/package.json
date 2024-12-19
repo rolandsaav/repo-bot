@@ -1,0 +1,14 @@
+{
+    "type": "module",
+    "name": "repo-bot-notifications",
+    "main": "reminders.js",
+    "engines": {
+        "node": ">=22.0.0"
+    },
+    "dependencies": {
+        "@google-cloud/functions-framework": "^3.4.3",
+        "dotenv": "^16.4.7",
+        "firebase-admin": "^13.0.1",
+        "twilio": "^5.4.0"
+    }
+}
