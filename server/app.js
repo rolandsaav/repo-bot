@@ -17,6 +17,7 @@ const clientId = process.env.CLIENT_ID
 const port = parseInt(process.env.PORT) || 3000;
 
 const environmentType = process.env.NODE_ENV || "development"
+const baseUrl = environmentType === "development" ? "http://localhost:3000" : "https://repo-bot-32532444194.us-east5.run.app"
 
 if (environmentType === "development") {
     console.log("Running in development environment")
@@ -57,7 +58,7 @@ const sessionMiddleware = async (req, res, next) => {
 }
 
 app.post("/verifyNumber", sessionMiddleware, async (req, res) => {
-    const phoneNumber = req.body.phone
+    const phoneNumber = req.query.phone
     console.log(phoneNumber)
     const verification = await client.verify.v2.services(verificationSecret)
         .verifications
@@ -122,7 +123,7 @@ app.get("/", sessionMiddleware, async (req, res) => {
         repos.push(data[i].name)
     }
 
-    res.render('index', { repos })
+    res.render('index', { repos: repos, baseUrl })
 })
 
 app.get("/github/callback", async (req, res) => {
@@ -188,6 +189,22 @@ app.post("/logout", sessionMiddleware, async (req, res) => {
     // clear session cookie
     res.clearCookie("session")
     res.status(200).send("You are logged out")
+})
+
+app.get("/auth/status", async (req, res) => {
+    const sessionToken = req.cookies.session
+    if (!sessionToken) {
+        return res.json({ loggedIn: false })
+    }
+    console.log(sessionToken)
+
+    const sessionDoc = await sessionsDb.doc(sessionToken).get();
+
+    if (!sessionDoc.exists) {
+        return res.json({ loggedIn: false })
+    }
+    console.log("Session exists")
+    return res.json({ loggedIn: true })
 })
 
 app.listen(port, () => {

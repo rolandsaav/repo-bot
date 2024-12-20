@@ -1,9 +1,16 @@
 <html>
 
 <body>
-<form action="http://localhost:3000/logout" method="post" >
+<form action="<%= baseUrl %>/logout" method="post" >
     <button type="submit">Logout</button>
 </form>
+
+<form action="<%=baseUrl%>/verifyNumber" method="post">
+    <input type="text" name="phone" id="">
+    <button type="submit">Verify Number</button>
+</form>
+
+<p> <%= baseUrl %> </p>
 <%if (repos.length > 0) { %> 
     <% repos.forEach(repo => { %>
         <p><%=repo %></p>
