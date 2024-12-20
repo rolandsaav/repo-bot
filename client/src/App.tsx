@@ -2,9 +2,12 @@ import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
+import { apiUrl } from './utils/environment'
 
 function App() {
   const [count, setCount] = useState(0)
+
+  console.log(apiUrl)
 
   return (
     <>
@@ -16,7 +19,8 @@ function App() {
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
       </div>
-      <h1>Vite + React</h1>
+      <h1>Consistent Commit</h1>
+      <h2>API URL {apiUrl}</h2>
       <div className="card">
         <button onClick={() => setCount((count) => count + 1)}>
           count is {count}
