@@ -191,6 +191,22 @@ app.post("/logout", sessionMiddleware, async (req, res) => {
     res.status(200).send("You are logged out")
 })
 
+app.get("/auth/status", async (req, res) => {
+    const sessionToken = req.cookies.session
+    if (!sessionToken) {
+        return res.json({ loggedIn: false })
+    }
+    console.log(sessionToken)
+
+    const sessionDoc = await sessionsDb.doc(sessionToken).get();
+
+    if (!sessionDoc.exists) {
+        return res.json({ loggedIn: false })
+    }
+    console.log("Session exists")
+    return res.json({ loggedIn: true })
+})
+
 app.listen(port, () => {
     console.log(`Server is listening on port: ${port}`)
 })
